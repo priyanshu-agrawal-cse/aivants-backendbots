@@ -1,0 +1,75 @@
+=== sites_enabled ===
+total 8
+drwxr-xr-x 2 root root 4096 Apr  4 19:14 .
+drwxr-xr-x 9 root root 4096 Mar 21 19:43 ..
+lrwxrwxrwx 1 root root   34 Apr  4 19:14 aivants -> /etc/nginx/sites-available/aivants
+
+=== aivants_config ===
+server {
+    listen 80;
+    server_name aivants.backendbots.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name aivants.backendbots.com;
+
+    ssl_certificate /etc/letsencrypt/live/aivants.backendbots.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/aivants.backendbots.com/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    root /var/www/aivants/dist;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+
+=== error_log ===
+2026/04/04 19:15:00 [error] 117905#117905: *1568 directory index of "/var/www/aivants/dist/" is forbidden, client: 117.209.89.253, server: aivants.backendbots.com, request: "GET / HTTP/1.1", host: "aivants.backendbots.com"
+2026/04/04 19:15:11 [error] 117905#117905: *1568 directory index of "/var/www/aivants/dist/" is forbidden, client: 117.209.89.253, server: aivants.backendbots.com, request: "GET / HTTP/1.1", host: "aivants.backendbots.com"
+2026/04/04 19:16:56 [error] 117905#117905: *1572 directory index of "/var/www/aivants/dist/" is forbidden, client: 117.209.89.253, server: aivants.backendbots.com, request: "GET / HTTP/1.1", host: "aivants.backendbots.com"
+2026/04/04 19:16:57 [error] 117905#117905: *1572 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 117.209.89.253, server: aivants.backendbots.com, request: "GET /favicon.ico HTTP/1.1", host: "aivants.backendbots.com", referrer: "https://aivants.backendbots.com/"
+2026/04/04 19:16:58 [error] 117905#117905: *1571 directory index of "/var/www/aivants/dist/" is forbidden, client: 117.209.89.253, server: aivants.backendbots.com, request: "GET / HTTP/1.1", host: "aivants.backendbots.com"
+2026/04/04 19:16:58 [error] 117905#117905: *1571 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 117.209.89.253, server: aivants.backendbots.com, request: "GET /favicon.ico HTTP/1.1", host: "aivants.backendbots.com", referrer: "https://aivants.backendbots.com/"
+2026/04/04 19:18:11 [error] 117905#117905: *1574 directory index of "/var/www/aivants/dist/" is forbidden, client: 117.209.89.253, server: aivants.backendbots.com, request: "GET / HTTP/1.1", host: "aivants.backendbots.com"
+2026/04/04 19:18:11 [error] 117905#117905: *1574 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 117.209.89.253, server: aivants.backendbots.com, request: "GET /favicon.ico HTTP/1.1", host: "aivants.backendbots.com", referrer: "https://aivants.backendbots.com/"
+2026/04/04 19:19:11 [error] 117905#117905: *1575 directory index of "/var/www/aivants/dist/" is forbidden, client: 117.209.89.253, server: aivants.backendbots.com, request: "GET / HTTP/1.1", host: "aivants.backendbots.com"
+2026/04/04 19:19:11 [error] 117905#117905: *1575 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 117.209.89.253, server: aivants.backendbots.com, request: "GET /favicon.ico HTTP/1.1", host: "aivants.backendbots.com", referrer: "https://aivants.backendbots.com/"
+2026/04/04 19:19:35 [error] 117905#117905: *1576 directory index of "/var/www/aivants/dist/" is forbidden, client: 117.209.89.253, server: aivants.backendbots.com, request: "GET / HTTP/1.1", host: "aivants.backendbots.com"
+2026/04/04 19:19:35 [error] 117905#117905: *1576 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 117.209.89.253, server: aivants.backendbots.com, request: "GET /favicon.ico HTTP/1.1", host: "aivants.backendbots.com", referrer: "https://aivants.backendbots.com/"
+2026/04/04 19:19:36 [error] 117905#117905: *1577 directory index of "/var/www/aivants/dist/" is forbidden, client: 117.209.89.253, server: aivants.backendbots.com, request: "GET / HTTP/1.1", host: "aivants.backendbots.com"
+2026/04/04 19:19:36 [error] 117905#117905: *1577 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 117.209.89.253, server: aivants.backendbots.com, request: "GET /favicon.ico HTTP/1.1", host: "aivants.backendbots.com", referrer: "https://aivants.backendbots.com/"
+2026/04/04 19:19:36 [error] 117905#117905: *1578 directory index of "/var/www/aivants/dist/" is forbidden, client: 117.209.89.253, server: aivants.backendbots.com, request: "GET / HTTP/1.1", host: "aivants.backendbots.com"
+2026/04/04 19:19:36 [error] 117905#117905: *1578 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 117.209.89.253, server: aivants.backendbots.com, request: "GET /favicon.ico HTTP/1.1", host: "aivants.backendbots.com", referrer: "https://aivants.backendbots.com/"
+2026/04/04 19:19:48 [error] 117905#117905: *1579 directory index of "/var/www/aivants/dist/" is forbidden, client: 117.209.89.253, server: aivants.backendbots.com, request: "GET / HTTP/1.1", host: "aivants.backendbots.com"
+2026/04/04 19:19:48 [error] 117905#117905: *1579 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 117.209.89.253, server: aivants.backendbots.com, request: "GET /favicon.ico HTTP/1.1", host: "aivants.backendbots.com", referrer: "https://aivants.backendbots.com/"
+2026/04/04 19:20:05 [error] 117905#117905: *1580 directory index of "/var/www/aivants/dist/" is forbidden, client: 117.209.89.253, server: aivants.backendbots.com, request: "GET / HTTP/1.1", host: "aivants.backendbots.com"
+2026/04/04 19:20:05 [error] 117905#117905: *1580 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 117.209.89.253, server: aivants.backendbots.com, request: "GET /favicon.ico HTTP/1.1", host: "aivants.backendbots.com", referrer: "https://aivants.backendbots.com/"
+
+=== dist_check ===
+total 8
+drwxr-xr-x 2 www-data www-data 4096 Apr  4 19:02 .
+drwxr-xr-x 3 www-data www-data 4096 Apr  4 19:02 ..
+
+=== root_check ===
+total 12
+drwxr-xr-x 3 www-data www-data 4096 Apr  4 19:02 .
+drwxr-xr-x 6 root     root     4096 Apr  4 19:02 ..
+drwxr-xr-x 2 www-data www-data 4096 Apr  4 19:02 dist
+
+=== school_mgmt_check ===
+
+

@@ -1,0 +1,2 @@
+ALTER TABLE public.notification_settings ADD CONSTRAINT notification_settings_user_channel_event_key UNIQUE (user_id, channel, event_type);
+ALTER TABLE public.integration_settings ADD CONSTRAINT integration_settings_user_integration_key UNIQUE (user_id, integration_name);

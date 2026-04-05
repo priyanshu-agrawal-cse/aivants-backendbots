@@ -1,0 +1,34 @@
+project_id = "xiuvgkmwnzzetxhkdqcd"
+
+[functions.classify-reply]
+verify_jwt = false
+
+[functions.inbound-reply-webhook]
+verify_jwt = false
+
+[functions.ai-generate-email]
+verify_jwt = false
+
+[functions.ai-research-company]
+verify_jwt = false
+
+[functions.send-email]
+verify_jwt = false
+
+[functions.process-followups]
+verify_jwt = false
+
+[functions.telegram-bot]
+verify_jwt = false
+
+[functions.ai-command-center]
+verify_jwt = false
+
+[functions.check-deadlines]
+verify_jwt = false
+
+[functions.ai-assistant]
+verify_jwt = false
+
+[functions.automation-runner]
+verify_jwt = false
