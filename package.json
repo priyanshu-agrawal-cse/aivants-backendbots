@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "start": "node backend/email-server.cjs",
     "dev": "concurrently --names \"vite,email\" --prefix-colors \"cyan,yellow\" \"vite\" \"node backend/email-server.cjs\"",
     "email-server": "node backend/email-server.cjs",
     "build": "vite build",
