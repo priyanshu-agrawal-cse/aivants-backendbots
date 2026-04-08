@@ -85,7 +85,7 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onClose }) => {
                 <input type="radio" checked={selectedOption === 'default'} onChange={() => setSelectedOption('default')} className="mt-1" />
                 <div>
                   <div className="font-medium text-sm">Default Mode</div>
-                  <div className="text-xs text-muted-foreground">Run completely on LiveKit like it is running now.</div>
+                  <div className="text-xs text-muted-foreground">Run completely on default voice infrastructure like it is running now.</div>
                 </div>
               </label>
 

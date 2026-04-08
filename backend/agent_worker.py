@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+from typing import Optional
 from pathlib import Path
 from livekit.agents import Agent, AgentSession, JobContext, WorkerOptions, cli, inference
 from livekit.plugins import silero, openai
@@ -11,6 +12,9 @@ from supabase import create_client, Client
 from livekit.agents import llm
 
 load_dotenv(dotenv_path=Path(__file__).parent / ".env")
+
+from vobiz_service import vobiz_service
+from personaplex_service import personaplex_service
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("voice-agent")
@@ -133,6 +137,88 @@ class AssistantFunctions:
             logger.error(f"Error in get_business_summary: {e}")
             return f"Error fetching summary: {str(e)}"
 
+    @llm.function_tool
+    async def buy_phone_number(self, country_code: str = "US", phone_number: Optional[str] = None):
+        """
+        Helps the user buy a professional phone number for voice AI using their Vobiz account.
+        """
+        try:
+            # 1. Fetch user specific Vobiz credentials from proxy/memory
+            auth_id = None
+            auth_token = None
+            
+            async with aiohttp.ClientSession() as session:
+                proxy_payload = {"userId": self.user_id, "key": "vobiz_config"}
+                async with session.post(f"{API_BASE_URL}/api/proxy/get-memory", json=proxy_payload) as m_resp:
+                    if m_resp.status == 200:
+                        m_data = await m_resp.json()
+                        if m_data.get("value"):
+                            try:
+                                config = json.loads(m_data["value"])
+                                auth_id = config.get("vobiz_auth_id")
+                                auth_token = config.get("vobiz_auth_token")
+                            except Exception as e:
+                                logger.error(f"Failed to parse vobiz_config from proxy: {e}")
+
+            if not auth_id or not auth_token:
+                return (
+                    "Error: Vobiz credentials not found. Please configure your Vobiz account "
+                    "in the Voice Settings before purchasing numbers."
+                )
+
+            if phone_number:
+                logger.info(f"User {self.user_id} purchasing number: {phone_number} with their own account")
+                result = await vobiz_service.purchase_number(auth_id, auth_token, phone_number)
+                if "error" in result:
+                    return f"Failed to purchase number {phone_number}: {result['error']}"
+                
+                # Save to voice_numbers table
+                if supabase:
+                    supabase.table("voice_numbers").insert({
+                        "user_id": self.user_id,
+                        "phone_number": phone_number,
+                        "provider": "vobiz",
+                        "status": "active"
+                    }).execute()
+                
+                return f"Successfully purchased {phone_number}! You can now use it for Voice AI campaigns."
+            else:
+                logger.info(f"Listing available numbers in {country_code}")
+                numbers = await vobiz_service.list_available_numbers(auth_id, auth_token, country_code)
+                if not numbers:
+                    return f"No numbers available in {country_code} at the moment."
+                
+                num_list = "\n".join([f"- {n['number']} ({n.get('region', 'N/A')})" for n in numbers[:10]])
+                return f"Available numbers in {country_code}:\n{num_list}\nPlease specify which one you'd like to purchase."
+        except Exception as e:
+            logger.error(f"Error in buy_phone_number: {e}")
+            return f"Error managing phone numbers: {str(e)}"
+
+    @llm.function_tool
+    async def schedule_voice_call(self, to_number: str, from_number: str, context: str):
+        """
+        Schedules or triggers an automated Voice AI call to a customer.
+        'context' should describe the purpose of the call (e.g., 'follow up on interest in real estate').
+        """
+        try:
+            logger.info(f"User {self.user_id} scheduling call to {to_number} from {from_number}")
+            persona_id = "default_persona" # Or fetch from user settings
+            result = await personaplex_service.trigger_call(
+                user_id=self.user_id,
+                to_number=to_number,
+                from_number=from_number,
+                persona_id=persona_id,
+                context={"purpose": context}
+            )
+            
+            if "error" in result:
+                return f"Failed to schedule call: {result['error']}"
+            
+            return f"Voice AI call scheduled to {to_number}. I will track the results for you."
+        except Exception as e:
+            logger.error(f"Error in schedule_voice_call: {e}")
+            return f"Error scheduling voice call: {str(e)}"
+
 class AivantsAssistant(Agent):
     def __init__(self, user_id: str) -> None:
         funcs = AssistantFunctions(user_id)
@@ -143,9 +229,11 @@ class AivantsAssistant(Agent):
                 "1. Sending individual emails. "
                 "2. Starting outreach campaigns (creating new campaigns in the system). "
                 "3. Providing a business summary (leads, campaigns). "
+                "4. Buying professional phone numbers for Voice AI (Vobiz). "
+                "5. Scheduling automated Voice AI calls (Personaplex) for follow-ups or lead generation. "
                 "Be professional, encouraging, and task-oriented."
             ),
-            tools=[funcs.send_email, funcs.start_campaign, funcs.get_business_summary]
+            tools=[funcs.send_email, funcs.start_campaign, funcs.get_business_summary, funcs.buy_phone_number, funcs.schedule_voice_call]
         )
 
 

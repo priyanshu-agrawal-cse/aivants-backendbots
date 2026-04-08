@@ -250,6 +250,9 @@ export type Database = {
           template_id: string | null
           updated_at: string
           user_id: string
+          voice_enabled: boolean
+          voice_from_number: string | null
+          voice_persona_id: string | null
         }
         Insert: {
           body?: string | null
@@ -261,6 +264,9 @@ export type Database = {
           template_id?: string | null
           updated_at?: string
           user_id: string
+          voice_enabled?: boolean
+          voice_from_number?: string | null
+          voice_persona_id?: string | null
         }
         Update: {
           body?: string | null
@@ -272,6 +278,9 @@ export type Database = {
           template_id?: string | null
           updated_at?: string
           user_id?: string
+          voice_enabled?: boolean
+          voice_from_number?: string | null
+          voice_persona_id?: string | null
         }
         Relationships: [
           {
@@ -834,6 +843,8 @@ export type Database = {
           step_number: number
           subject_override: string | null
           template_id: string | null
+          voice_from_number: string | null
+          voice_persona_id: string | null
         }
         Insert: {
           action_type?: string
@@ -849,6 +860,8 @@ export type Database = {
           step_number?: number
           subject_override?: string | null
           template_id?: string | null
+          voice_from_number?: string | null
+          voice_persona_id?: string | null
         }
         Update: {
           action_type?: string
@@ -864,6 +877,8 @@ export type Database = {
           step_number?: number
           subject_override?: string | null
           template_id?: string | null
+          voice_from_number?: string | null
+          voice_persona_id?: string | null
         }
         Relationships: [
           {
@@ -1733,6 +1748,95 @@ export type Database = {
           updated_at?: string
           user_id?: string
           webhook_secret?: string | null
+        }
+        Relationships: []
+      }
+      voice_calls: {
+        Row: {
+          call_id: string | null
+          campaign_id: string | null
+          completed_at: string | null
+          created_at: string
+          from_number: string
+          id: string
+          interest_level: string | null
+          key_points: Json | null
+          persona_id: string | null
+          response_data: Json | null
+          status: string
+          summary: string | null
+          to_number: string
+          transcript: string | null
+          user_id: string | null
+        }
+        Insert: {
+          call_id?: string | null
+          campaign_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          from_number: string
+          id?: string
+          interest_level?: string | null
+          key_points?: Json | null
+          persona_id?: string | null
+          response_data?: Json | null
+          status?: string
+          summary?: string | null
+          to_number: string
+          transcript?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          call_id?: string | null
+          campaign_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          from_number?: string
+          id?: string
+          interest_level?: string | null
+          key_points?: Json | null
+          persona_id?: string | null
+          response_data?: Json | null
+          status?: string
+          summary?: string | null
+          to_number?: string
+          transcript?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_calls_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "voice_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      voice_numbers: {
+        Row: {
+          created_at: string
+          id: string
+          phone_number: string
+          provider: string | null
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          phone_number: string
+          provider?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          phone_number?: string
+          provider?: string | null
+          status?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }

@@ -261,8 +261,90 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Skip non-email channels, advance step
-        if (step.channel !== "email") {
+        // Handle Voice Channel
+        if (step.channel === "voice" || step.action_type === "voice") {
+          const { data: lead } = await supabase.from("leads").select("*").eq("id", followup.lead_id).single();
+          if (!lead) {
+            await supabase.from("followup_status").update({ status: "completed", updated_at: now }).eq("id", followup.id);
+            continue;
+          }
+
+          // Resolve Persona and From Number
+          let fromNumber = step.voice_from_number;
+          let personaId = step.voice_persona_id;
+
+          if (!fromNumber && followup.campaign_id) {
+            const { data: campaign } = await supabase
+              .from("campaigns")
+              .select("voice_from_number, voice_persona_id")
+              .eq("id", followup.campaign_id)
+              .single();
+            fromNumber = campaign?.voice_from_number;
+            personaId = personaId || campaign?.voice_persona_id;
+          }
+
+          // Default fallback if still missing
+          fromNumber = fromNumber || "unknown"; // trigger-voice-call will handle validation
+          personaId = personaId || "sales_executive";
+
+          // Build context
+          const replaceVars = (text: string) =>
+            text
+              .replace(/\{first_name\}/g, lead.first_name || "")
+              .replace(/\{last_name\}/g, lead.last_name || "")
+              .replace(/\{company_name\}/g, lead.company_name || "")
+              .replace(/\{industry\}/g, lead.industry || "");
+
+          const callContext = replaceVars(step.body_override || "Follow-up conversation");
+
+          // Trigger AI Voice Call
+          try {
+            const { data: vRes, error: vErr } = await supabase.functions.invoke("trigger-voice-call", {
+              body: {
+                user_id: followup.user_id,
+                lead_id: lead.id,
+                to_number: lead.phone,
+                from_number: fromNumber,
+                persona_id: personaId,
+                context: callContext,
+                campaign_id: followup.campaign_id
+              }
+            });
+
+            if (vErr || vRes?.error) {
+              console.error("Voice trigger failed:", vErr || vRes?.error);
+              errors++;
+              continue;
+            }
+          } catch (vErr) {
+            console.error("Voice trigger exception:", vErr);
+            errors++;
+            continue;
+          }
+
+          const nextInfo = await getNextStepInfo(supabase, followup.sequence_id, nextStepNumber);
+          const nextDate = nextInfo ? new Date(Date.now() + nextInfo.delay_days * 86400000).toISOString() : null;
+          
+          await supabase.from("followup_status").update({
+            current_step: nextStepNumber,
+            next_followup_date: nextDate,
+            updated_at: now,
+            ...(nextDate ? {} : { status: "completed" }),
+          }).eq("id", followup.id);
+
+          // Notify via Telegram
+          await sendTelegramNotification(
+            supabase, followup.user_id,
+            `📞 <b>AI Call Triggered</b>\n${lead.first_name} ${lead.last_name || ""} — Step ${nextStepNumber} (Follow-up)`,
+            "campaigns"
+          );
+
+          processed++;
+          continue;
+        }
+
+        // Skip other non-email channels
+        if (step.channel !== "email" && step.action_type !== "email") {
           const nextInfo = await getNextStepInfo(supabase, followup.sequence_id, nextStepNumber);
           const nextDate = nextInfo ? new Date(Date.now() + nextInfo.delay_days * 86400000).toISOString() : null;
           await supabase.from("followup_status").update({

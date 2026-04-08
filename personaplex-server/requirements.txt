@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+pydantic
+aiohttp
+torch
+transformers
+accelerate
+soundfile
+librosa
+python-multipart
+python-dotenv

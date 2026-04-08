@@ -9,7 +9,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, X, Send, Loader2, Users, Mail, Search, FileText } from "lucide-react";
+import { Plus, X, Send, Loader2, Users, Mail, Search, FileText, Phone, Bot } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +21,7 @@ interface Lead {
   last_name: string | null;
   company_name: string | null;
   email: string;
+  phone: string | null;
 }
 
 interface CampaignDetailDialogProps {
@@ -45,6 +47,10 @@ export function CampaignDetailDialog({ open, onOpenChange, campaignId, onRefresh
   const [addLeadsOpen, setAddLeadsOpen] = useState(false);
   const [templates, setTemplates] = useState<any[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+  const [voiceNumbers, setVoiceNumbers] = useState<any[]>([]);
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [voicePersonaId, setVoicePersonaId] = useState("sales_executive");
+  const [voiceFromNumber, setVoiceFromNumber] = useState("");
 
   const fetchCampaignData = useCallback(async () => {
     if (!campaignId || !user) return;
@@ -65,12 +71,26 @@ export function CampaignDetailDialog({ open, onOpenChange, campaignId, onRefresh
       const leadIds = leadsRes.data.map((cl: any) => cl.lead_id);
       const { data: leadDetails } = await supabase
         .from("leads")
-        .select("id, first_name, last_name, company_name, email")
+        .select("id, first_name, last_name, company_name, email, phone")
         .in("id", leadIds);
       setCampaignLeads(leadDetails || []);
     } else {
       setCampaignLeads([]);
     }
+
+    if (campaignRes.data) {
+      setVoiceEnabled(campaignRes.data.voice_enabled ?? false);
+      setVoicePersonaId(campaignRes.data.voice_persona_id ?? "sales_executive");
+      setVoiceFromNumber(campaignRes.data.voice_from_number ?? "");
+    }
+
+    // Fetch voice numbers
+    const { data: vNums } = await supabase
+      .from("voice_numbers")
+      .select("phone_number")
+      .eq("user_id", user.id)
+      .eq("status", "active");
+    setVoiceNumbers(vNums || []);
 
     // Fetch templates
     const { data: tData } = await supabase
@@ -90,7 +110,7 @@ export function CampaignDetailDialog({ open, onOpenChange, campaignId, onRefresh
     if (!user) return;
     const { data } = await supabase
       .from("leads")
-      .select("id, first_name, last_name, company_name, email")
+      .select("id, first_name, last_name, company_name, email, phone")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(500);
@@ -158,6 +178,9 @@ export function CampaignDetailDialog({ open, onOpenChange, campaignId, onRefresh
         subject: subject || null, 
         body, 
         template_id: selectedTemplateId || null,
+        voice_enabled: voiceEnabled,
+        voice_persona_id: voicePersonaId,
+        voice_from_number: voiceFromNumber || null,
         updated_at: new Date().toISOString() 
       } as any)
       .eq("id", campaignId);
@@ -196,7 +219,15 @@ export function CampaignDetailDialog({ open, onOpenChange, campaignId, onRefresh
     // Save email content first
     await supabase
       .from("campaigns")
-      .update({ subject, body, status: "active", updated_at: new Date().toISOString() } as any)
+      .update({ 
+        subject, 
+        body, 
+        status: "active", 
+        voice_enabled: voiceEnabled,
+        voice_persona_id: voicePersonaId,
+        voice_from_number: voiceFromNumber || null,
+        updated_at: new Date().toISOString() 
+      } as any)
       .eq("id", campaignId);
 
     // Send to each lead with valid email
@@ -228,6 +259,25 @@ export function CampaignDetailDialog({ open, onOpenChange, campaignId, onRefresh
           failCount++;
         } else {
           successCount++;
+          
+          // Trigger Voice Call if enabled
+          if (voiceEnabled && lead.phone) {
+            try {
+              await supabase.functions.invoke("trigger-voice-call", {
+                body: {
+                  user_id: user.id,
+                  lead_id: lead.id,
+                  to_number: lead.phone,
+                  from_number: voiceFromNumber,
+                  persona_id: voicePersonaId,
+                  context: personalizedBody,
+                  campaign_id: campaignId
+                }
+              });
+            } catch (v_err) {
+              console.error("Failed to trigger voice call:", v_err);
+            }
+          }
         }
       } catch {
         failCount++;
@@ -307,6 +357,56 @@ export function CampaignDetailDialog({ open, onOpenChange, campaignId, onRefresh
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-4 pt-2 border-t border-border/40">
+               <div className="flex items-center justify-between">
+                 <div className="space-y-0.5">
+                   <Label className="text-base flex items-center gap-2">
+                     <Phone className="h-4 w-4 text-primary" /> AI Voice Calling
+                   </Label>
+                   <p className="text-xs text-muted-foreground"> Trigger automated calls after each email</p>
+                 </div>
+                 <Switch 
+                   checked={voiceEnabled} 
+                   onCheckedChange={setVoiceEnabled} 
+                 />
+               </div>
+
+               {voiceEnabled && (
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in slide-in-from-top-2 duration-300">
+                   <div className="space-y-2">
+                     <Label>Calling From</Label>
+                     <Select value={voiceFromNumber} onValueChange={setVoiceFromNumber}>
+                       <SelectTrigger>
+                         <SelectValue placeholder="Select a number..." />
+                       </SelectTrigger>
+                       <SelectContent>
+                         {voiceNumbers.map((v) => (
+                           <SelectItem key={v.phone_number} value={v.phone_number}>{v.phone_number}</SelectItem>
+                         ))}
+                         {voiceNumbers.length === 0 && (
+                           <SelectItem value="none" disabled>No active numbers found</SelectItem>
+                         )}
+                       </SelectContent>
+                     </Select>
+                   </div>
+                   <div className="space-y-2">
+                     <Label>AI Voice Profile</Label>
+                     <Select value={voicePersonaId} onValueChange={setVoicePersonaId}>
+                       <SelectTrigger>
+                         <SelectValue />
+                       </SelectTrigger>
+                       <SelectContent>
+                         <SelectItem value="sales_executive">Sales Executive</SelectItem>
+                         <SelectItem value="customer_support">Customer Support</SelectItem>
+                         <SelectItem value="appointment_setter">Appointment Setter</SelectItem>
+                         <SelectItem value="technical_advisor">Technical Advisor</SelectItem>
+                       </SelectContent>
+                     </Select>
+                   </div>
+                 </div>
+               )}
             </div>
 
             <div className="space-y-2">

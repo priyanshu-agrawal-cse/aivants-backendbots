@@ -33,6 +33,7 @@ import TeamMembers from "./pages/TeamMembers";
 import AIAssistant from "./pages/AIAssistant";
 import AIKnowledgeBase from "./pages/AIKnowledgeBase";
 import VoiceAgentPage from "./pages/VoiceAgentPage";
+import LiveAssistantPage from "./pages/LiveAssistantPage";
 import WhatsAppIntegration from "./pages/WhatsAppIntegration";
 import NotFound from "./pages/NotFound";
 
@@ -86,6 +87,7 @@ const App = () => (
               <Route path="/team" element={<TeamMembers />} />
               <Route path="/ai-assistant" element={<AIAssistant />} />
               <Route path="/voice-agent" element={<VoiceAgentPage />} />
+              <Route path="/live-assistant" element={<LiveAssistantPage />} />
               <Route path="/knowledge-base" element={<AIKnowledgeBase />} />
               <Route path="/whatsapp" element={<WhatsAppIntegration />} />
               <Route path="/settings" element={<SettingsPage />} />

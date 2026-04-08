@@ -8,7 +8,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Trash2, CalendarClock, Loader2, GripVertical, Paperclip } from "lucide-react";
+import { Plus, Trash2, CalendarClock, Loader2, GripVertical, Paperclip, Phone, Bot } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 
 interface Lead { id: string; first_name: string; last_name: string | null; email: string; company_name: string | null; }
 interface Sequence { id: string; name: string; followup_type: string; }
@@ -25,6 +28,8 @@ interface StepDraft {
   content_asset_id: string | null;
   template_id: string | null;
   script_id: string | null;
+  voice_persona_id: string | null;
+  voice_from_number: string | null;
 }
 
 const FOLLOWUP_TYPES = [
@@ -86,12 +91,16 @@ const emptyStep: StepDraft = {
   content_asset_id: null,
   template_id: null,
   script_id: null,
+  voice_persona_id: null,
+  voice_from_number: null,
 };
 
 export function CreateFollowUpDialog({
   open, onOpenChange, leads, sequences, assets, templates, defaultCategory, onSubmit,
 }: CreateFollowUpDialogProps) {
+  const { user } = useAuth();
   const [saving, setSaving] = useState(false);
+  const [voiceNumbers, setVoiceNumbers] = useState<any[]>([]);
   const [leadSource, setLeadSource] = useState<"existing" | "manual">("existing");
   const [form, setForm] = useState<CreateFollowUpData>({
     category: defaultCategory,
@@ -110,6 +119,19 @@ export function CreateFollowUpDialog({
     client_company: "",
     custom_steps: [{ ...emptyStep }],
   });
+
+  useEffect(() => {
+    const fetchVoiceNumbers = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from("voice_numbers")
+        .select("phone_number")
+        .eq("user_id", user.id)
+        .eq("status", "active");
+      setVoiceNumbers(data || []);
+    };
+    fetchVoiceNumbers();
+  }, [user]);
 
   const [useCustomSteps, setUseCustomSteps] = useState(false);
 
@@ -347,6 +369,7 @@ export function CreateFollowUpDialog({
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="email">Send Email</SelectItem>
+                              <SelectItem value="voice">AI Voice Call</SelectItem>
                               <SelectItem value="reminder">Task Reminder</SelectItem>
                               <SelectItem value="telegram">Telegram Alert</SelectItem>
                             </SelectContent>
@@ -413,6 +436,58 @@ export function CreateFollowUpDialog({
                             <p className="text-xs text-muted-foreground">
                               Variables: {"{first_name}"} {"{company_name}"} {"{industry}"}
                             </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {step.action_type === "voice" && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 animate-in fade-in duration-300">
+                          <div className="space-y-1">
+                            <Label className="text-xs">AI Agent Voice</Label>
+                            <Select 
+                              value={step.voice_persona_id || "none"} 
+                              onValueChange={v => updateStep(index, "voice_persona_id", v === "none" ? null : v)}
+                            >
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue placeholder="Select Voice Profile" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Pick Voice Profile...</SelectItem>
+                                <SelectItem value="sales_executive">Sales Executive</SelectItem>
+                                <SelectItem value="customer_support">Customer Support</SelectItem>
+                                <SelectItem value="appointment_setter">Appointment Setter</SelectItem>
+                                <SelectItem value="technical_advisor">Technical Advisor</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">From Number (Optional)</Label>
+                            <Select 
+                              value={step.voice_from_number || "fallback"} 
+                              onValueChange={v => updateStep(index, "voice_from_number", v === "fallback" ? null : v)}
+                            >
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="fallback">Use Campaign Default</SelectItem>
+                                {voiceNumbers.map((v) => (
+                                  <SelectItem key={v.phone_number} value={v.phone_number}>{v.phone_number}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="md:col-span-2 space-y-1">
+                            <Label className="text-xs font-semibold flex items-center gap-2">
+                              <Bot className="w-3 h-3 text-primary" /> Call Transcript/Context
+                            </Label>
+                            <Textarea
+                              value={step.body_override}
+                              onChange={e => updateStep(index, "body_override", e.target.value)}
+                              placeholder={"Explain what the AI should talk about...\ne.g. Hi {first_name}, I'm calling from Aivants regarding..."}
+                              rows={3}
+                              className="text-xs"
+                            />
                           </div>
                         </div>
                       )}

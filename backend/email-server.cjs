@@ -206,7 +206,115 @@ app.get("/api/token", async (req, res) => {
 // Health check
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
 
-const PORT = process.env.EMAIL_SERVER_PORT || 3001;
+// Vobiz Proxy Routes
+app.get("/api/voice/available-numbers", async (req, res) => {
+  const { userId, country } = req.query;
+  if (!supabaseAdmin) return res.status(500).json({ error: "Supabase Admin not configured" });
+
+  try {
+    const { data: memory } = await supabaseAdmin
+      .from("ai_memory")
+      .select("value")
+      .eq("user_id", userId)
+      .eq("key", "vobiz_config")
+      .maybeSingle();
+
+    if (!memory?.value) return res.status(400).json({ error: "Vobiz credentials not found in settings" });
+
+    const { vobiz_auth_id, vobiz_auth_token } = JSON.parse(memory.value);
+    const response = await fetch(`https://api.vobiz.ai/api/v1/account/${vobiz_auth_id}/inventory/numbers?country=${country || 'US'}`, {
+      headers: {
+        "X-Auth-ID": vobiz_auth_id,
+        "X-Auth-Token": vobiz_auth_token
+      }
+    });
+
+    const data = await response.json();
+    return res.json(data);
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/voice/purchase-number", async (req, res) => {
+  const { userId, number } = req.body;
+  if (!supabaseAdmin) return res.status(500).json({ error: "Supabase Admin not configured" });
+
+  try {
+    const { data: memory } = await supabaseAdmin
+      .from("ai_memory")
+      .select("value")
+      .eq("user_id", userId)
+      .eq("key", "vobiz_config")
+      .maybeSingle();
+
+    if (!memory?.value) return res.status(400).json({ error: "Vobiz credentials not found in settings" });
+
+    const { vobiz_auth_id, vobiz_auth_token } = JSON.parse(memory.value);
+    const response = await fetch(`https://api.vobiz.ai/api/v1/account/${vobiz_auth_id}/numbers/purchase-from-inventory`, {
+      method: "POST",
+      headers: {
+        "X-Auth-ID": vobiz_auth_id,
+        "X-Auth-Token": vobiz_auth_token,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ number })
+    });
+
+    const data = await response.json();
+    return res.json(data);
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/webhooks/personaplex
+// Webhook for Personaplex to push call completion data
+app.post("/api/webhooks/personaplex", async (req, res) => {
+  const { call_id, status, transcript, summary, interest_level, key_points } = req.body;
+  if (!supabaseAdmin) {
+    console.error("❌ Cannot process Personaplex webhook: Supabase Admin not configured");
+    return res.status(500).json({ error: "Supabase Admin not configured" });
+  }
+
+  try {
+    const { error } = await supabaseAdmin
+      .from("voice_calls")
+      .update({
+        status: status,
+        transcript: transcript,
+        summary: summary,
+        interest_level: interest_level,
+        key_points: JSON.stringify(key_points || []),
+        completed_at: new Date().toISOString()
+      })
+      .eq("call_id", call_id);
+      
+    if (error) {
+      console.error(`❌ DB error updating voice_calls for ${call_id}:`, error);
+      throw error;
+    }
+    
+    console.log(`✅ Successfully synced voice call result for ${call_id}`);
+    return res.json({ success: true, message: "Call synced successfully" });
+  } catch (err) {
+    console.error("❌ Personaplex Webhook Error:", err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// Serve frontend static files if running in production together
+const DIST_DIR = path.join(__dirname, "../dist");
+app.use(express.static(DIST_DIR));
+
+// Catch-all to serve index.html for React Router
+app.get("*", (req, res) => {
+  if (!req.path.startsWith('/api')) {
+    res.sendFile(path.join(DIST_DIR, "index.html"));
+  }
+});
+
+const PORT = process.env.PORT || process.env.EMAIL_SERVER_PORT || 3001;
 app.listen(PORT, () => {
   console.log(`\n📧 Email server (Nodemailer) running on http://localhost:${PORT}`);
   console.log(`   POST /api/send-email  — send an email`);

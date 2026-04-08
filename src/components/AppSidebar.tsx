@@ -92,10 +92,10 @@ const navigationStructure = [
     title: "Intelligence",
     icon: Sparkle,
     items: [
-      { title: "Voice Agent", url: "/voice-agent", icon: MicrophoneStage },
+      { title: "AI Calling Agent", url: "/voice-agent", icon: MicrophoneStage },
+      { title: "Live Assistant", url: "/live-assistant", icon: MicrophoneStage },
       { title: "AI Assistant", url: "/ai-assistant", icon: Sparkle },
       { title: "Knowledge Base", url: "/knowledge-base", icon: FileText },
-      // { title: "WhatsApp Agent", url: "/whatsapp", icon: WhatsappLogo },
     ],
   },
   {
