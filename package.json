@@ -4,8 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "start": "node backend/email-server.cjs",
-    "dev": "concurrently --names \"vite,email\" --prefix-colors \"cyan,yellow\" \"vite\" \"node backend/email-server.cjs\"",
+    "start": "sh start-all.sh",
+    "start:prod": "sh start-all.sh",
+    "dev": "concurrently --names \"vite,email,agent\" --prefix-colors \"cyan,yellow,blue\" \"vite\" \"node backend/email-server.cjs\" \"python backend/agent_worker.py dev\"",
     "email-server": "node backend/email-server.cjs",
     "build": "vite build",
     "build:dev": "vite build --mode development",

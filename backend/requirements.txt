@@ -4,3 +4,5 @@ livekit-plugins-silero
 python-dotenv
 supabase
 aiohttp
+livekit-plugins-elevenlabs
+
