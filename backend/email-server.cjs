@@ -308,9 +308,11 @@ const DIST_DIR = path.join(__dirname, "../dist");
 app.use(express.static(DIST_DIR));
 
 // Catch-all to serve index.html for React Router
-app.get("*", (req, res) => {
+app.use((req, res, next) => {
   if (!req.path.startsWith('/api')) {
     res.sendFile(path.join(DIST_DIR, "index.html"));
+  } else {
+    next();
   }
 });
 
