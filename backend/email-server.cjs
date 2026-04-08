@@ -316,12 +316,11 @@ app.use((req, res, next) => {
   }
 });
 
-const PORT_ORIGINAL = process.env.PORT || process.env.EMAIL_SERVER_PORT || 3001;
-const PORT = parseInt(PORT_ORIGINAL, 10);
-console.log(`[BOOT] Initiating binding to 0.0.0.0:${PORT}...`);
+const PORT = process.env.PORT || process.env.EMAIL_SERVER_PORT || 3001;
+console.log(`[BOOT] Initiating binding to Port ${PORT}...`);
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`\n📧 Email server (Nodemailer) running on http://0.0.0.0:${PORT}`);
+app.listen(PORT, () => {
+  console.log(`\n📧 Email server (Nodemailer) running on Port ${PORT}`);
   console.log(`   POST /api/send-email  — send an email`);
   console.log(`   POST /api/test-smtp   — verify SMTP credentials`);
   console.log(`   GET  /api/health      — health check\n`);
