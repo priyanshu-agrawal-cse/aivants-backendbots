@@ -315,8 +315,8 @@ app.get("*", (req, res) => {
 });
 
 const PORT = process.env.PORT || process.env.EMAIL_SERVER_PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`\n📧 Email server (Nodemailer) running on http://localhost:${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`\n📧 Email server (Nodemailer) running on http://0.0.0.0:${PORT}`);
   console.log(`   POST /api/send-email  — send an email`);
   console.log(`   POST /api/test-smtp   — verify SMTP credentials`);
   console.log(`   GET  /api/health      — health check\n`);
